@@ -10,6 +10,7 @@ import (
 
 	"SDOBA/internal/config"
 	"SDOBA/internal/database"
+	"SDOBA/internal/middleware"
 )
 
 func main() {
@@ -40,14 +41,14 @@ func main() {
 
 	api := app.Group("/api/v1")
 
-	users := api.Group("/users")
-	auth := api.Group("/auth")
-
-	auth.Post("/", userAuthHandler.Register)
-	auth.Post("/login", userAuthHandler.Login)
+	users := api.Group("/users", middleware.JWTAuth(cfg.JWT.Secret))
 	users.Get("/:id", userHandler.GetByID)
 	users.Put("/:id", userHandler.Update)
 	users.Delete("/:id", userHandler.Delete)
+
+	auth := api.Group("/auth")
+	auth.Post("/", userAuthHandler.Register)
+	auth.Post("/login", userAuthHandler.Login)
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
