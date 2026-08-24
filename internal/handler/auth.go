@@ -59,7 +59,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.authService.Login(
+	token, err := h.authService.Login(
 		c.UserContext(),
 		req.Email,
 		req.Password,
@@ -70,5 +70,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(user)
+	return c.JSON(fiber.Map{
+		"access_token": token,
+	})
 }

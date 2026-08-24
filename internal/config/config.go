@@ -59,7 +59,7 @@ func Load() *Config {
 			Port: getEnv("REDIS_PORT", "6379"),
 		},
 		JWT: JWTConfig{
-			Secret: getEnv("JWT_SECRET", ""),
+			Secret: os.Getenv("JWT_SECRET"),
 		},
 	}
 }

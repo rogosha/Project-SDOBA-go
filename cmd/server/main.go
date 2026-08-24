@@ -33,7 +33,8 @@ func main() {
 
 	userRepository := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepository)
-	authService := service.NewAuthService(userService)
+	tokenService := service.NewTokenService(cfg.JWT.Secret)
+	authService := service.NewAuthService(userService, tokenService)
 	userHandler := handler.NewUserHandler(userService)
 	userAuthHandler := handler.NewAuthHandler(authService)
 

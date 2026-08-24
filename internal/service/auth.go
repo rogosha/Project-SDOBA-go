@@ -11,12 +11,17 @@ import (
 )
 
 type AuthService struct {
-	userService *UserService
+	userService  *UserService
+	tokenService *TokenService
 }
 
-func NewAuthService(userService *UserService) *AuthService {
+func NewAuthService(
+	userService *UserService,
+	tokenService *TokenService,
+) *AuthService {
 	return &AuthService{
-		userService: userService,
+		userService:  userService,
+		tokenService: tokenService,
 	}
 }
 
@@ -49,19 +54,24 @@ func (s *AuthService) Register(ctx context.Context, username string, email strin
 	return user, nil
 }
 
-func (s *AuthService) Login(ctx context.Context, email string, password string) (*model.User, error) {
+func (s *AuthService) Login(ctx context.Context, email string, password string) (string, error) {
 
 	user, err := s.userService.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, err
+		return "", errors.New("invalid email or password")
 	}
 
 	if err := bcrypt.CompareHashAndPassword(
 		[]byte(user.PasswordHash),
 		[]byte(password),
 	); err != nil {
-		return nil, errors.New("invalid email or password")
+		return "", errors.New("invalid password or email")
 	}
 
-	return user, nil
+	token, err := s.tokenService.Generate(user.ID)
+	if err != nil {
+		return "", fmt.Errorf("generate token: %w", err)
+	}
+
+	return token, nil
 }
