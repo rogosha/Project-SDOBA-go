@@ -1,6 +1,7 @@
 package main
 
 import (
+	"SDOBA/internal/handler"
 	"SDOBA/internal/repository"
 	"SDOBA/internal/service"
 	"log"
@@ -30,14 +31,6 @@ func main() {
 
 	app := fiber.New()
 
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status":   "ok",
-			"database": "ok",
-			"service":  cfg.App.Name,
-		})
-	})
-
 	userRepository := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepository)
 	userHandler := handler.NewUserHandler(userService)
@@ -50,6 +43,14 @@ func main() {
 	users.Get("/:id", userHandler.GetByID)
 	users.Put("/:id", userHandler.Update)
 	users.Delete("/:id", userHandler.Delete)
+
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status":   "ok",
+			"database": "ok",
+			"service":  cfg.App.Name,
+		})
+	})
 
 	log.Fatal(app.Listen(":" + cfg.App.Port))
 }

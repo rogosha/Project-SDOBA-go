@@ -64,7 +64,7 @@ func (r *UserRepository) FindByID(ctx context.Context, id uint) (*model.User, er
 
 	if err := r.db.
 		WithContext(ctx).
-		Where("username = ?", id).
+		Where("id = ?", id).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound

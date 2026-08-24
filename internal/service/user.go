@@ -31,20 +31,20 @@ func (s *UserService) Create(ctx context.Context, user *model.User) error {
 
 	exists, err := s.userRepository.FindByUsername(ctx, user.Username)
 	if err != nil {
-		return fmt.Errorf("check username: %w", err)
+		//return fmt.Errorf("check username: %w", err)
 	}
 
 	if exists != nil {
-		return fmt.Errorf("user already exists:", exists)
+		return fmt.Errorf("user already exists")
 	}
 
 	exists, err = s.userRepository.FindByEmail(ctx, user.Email)
 	if err != nil {
-		return fmt.Errorf("check email: %w", err)
+		//return fmt.Errorf("check email: %w", err)
 	}
 
 	if exists != nil {
-		return fmt.Errorf("user already exists:", exists)
+		return fmt.Errorf("user already exists")
 	}
 
 	if err := s.userRepository.Create(ctx, user); err != nil {
