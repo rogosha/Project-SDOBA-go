@@ -20,40 +20,10 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 	}
 }
 
-type CreateUserRequest struct {
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatar_url"`
-}
-
 type UpdateUserRequest struct {
 	Username  string `json:"username"`
 	Email     string `json:"email"`
 	AvatarURL string `json:"avatar_url"`
-}
-
-func (h *UserHandler) Create(c *fiber.Ctx) error {
-	var req CreateUserRequest
-
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid request body",
-		})
-	}
-
-	user := &model.User{
-		Username:  req.Username,
-		Email:     req.Email,
-		AvatarURL: req.AvatarURL,
-	}
-
-	if err := h.userService.Create(c.UserContext(), user); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(user)
 }
 
 func (h *UserHandler) GetByID(c *fiber.Ctx) error {

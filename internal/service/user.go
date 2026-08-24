@@ -35,7 +35,7 @@ func (s *UserService) Create(ctx context.Context, user *model.User) error {
 	}
 
 	if exists != nil {
-		return fmt.Errorf("user already exists")
+		return ErrUsernameExists
 	}
 
 	exists, err = s.userRepository.FindByEmail(ctx, user.Email)
@@ -44,7 +44,7 @@ func (s *UserService) Create(ctx context.Context, user *model.User) error {
 	}
 
 	if exists != nil {
-		return fmt.Errorf("user already exists")
+		return ErrEmailExists
 	}
 
 	if err := s.userRepository.Create(ctx, user); err != nil {

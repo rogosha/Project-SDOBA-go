@@ -33,13 +33,17 @@ func main() {
 
 	userRepository := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepository)
+	authService := service.NewAuthService(userService)
 	userHandler := handler.NewUserHandler(userService)
+	userAuthHandler := handler.NewAuthHandler(authService)
 
 	api := app.Group("/api/v1")
 
 	users := api.Group("/users")
+	auth := api.Group("/auth")
 
-	users.Post("/", userHandler.Create)
+	auth.Post("/", userAuthHandler.Register)
+	auth.Post("/login", userAuthHandler.Login)
 	users.Get("/:id", userHandler.GetByID)
 	users.Put("/:id", userHandler.Update)
 	users.Delete("/:id", userHandler.Delete)
