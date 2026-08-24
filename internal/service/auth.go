@@ -75,3 +75,7 @@ func (s *AuthService) Login(ctx context.Context, email string, password string) 
 
 	return token, nil
 }
+
+func (s *AuthService) GetCurrentUser(ctx context.Context, userID uint) (*model.User, error) {
+	return s.userService.GetByID(ctx, userID)
+}

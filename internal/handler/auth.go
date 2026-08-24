@@ -2,6 +2,7 @@ package handler
 
 import (
 	"SDOBA/internal/service"
+	"errors"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -73,4 +74,31 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"access_token": token,
 	})
+}
+
+func (h *AuthHandler) Me(c *fiber.Ctx) error {
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "unauthorized",
+		})
+	}
+
+	user, err := h.authService.GetCurrentUser(
+		c.UserContext(),
+		userID,
+	)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "user not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(user)
 }

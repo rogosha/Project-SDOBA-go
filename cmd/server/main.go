@@ -32,11 +32,11 @@ func main() {
 
 	app := fiber.New()
 
+	tokenService := service.NewTokenService(cfg.JWT.Secret)
 	userRepository := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepository)
-	tokenService := service.NewTokenService(cfg.JWT.Secret)
-	authService := service.NewAuthService(userService, tokenService)
 	userHandler := handler.NewUserHandler(userService)
+	authService := service.NewAuthService(userService, tokenService)
 	userAuthHandler := handler.NewAuthHandler(authService)
 
 	api := app.Group("/api/v1")
@@ -47,8 +47,11 @@ func main() {
 	users.Delete("/:id", userHandler.Delete)
 
 	auth := api.Group("/auth")
-	auth.Post("/", userAuthHandler.Register)
+	auth.Post("/register", userAuthHandler.Register)
 	auth.Post("/login", userAuthHandler.Login)
+
+	protectedAuth := auth.Group("", middleware.JWTAuth(cfg.JWT.Secret))
+	protectedAuth.Get("/me", middleware.JWTAuth(cfg.JWT.Secret), userAuthHandler.Me)
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
