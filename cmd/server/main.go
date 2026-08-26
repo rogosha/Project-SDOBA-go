@@ -8,13 +8,18 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"SDOBA/docs"
+
 	"SDOBA/internal/config"
 	"SDOBA/internal/database"
 	"SDOBA/internal/middleware"
+
 	"github.com/gofiber/swagger"
 )
 
 func main() {
+	_ = docs.SwaggerInfo
+
 	cfg := config.Load()
 
 	db, err := database.NewPostgres(cfg)
@@ -27,9 +32,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := sqlDB.Ping(); err != nil {
+	redisClient, err := database.NewRedis(cfg)
+	if err != nil {
 		log.Fatal(err)
 	}
+	defer redisClient.Close()
 
 	app := fiber.New()
 
@@ -56,10 +63,37 @@ func main() {
 	protectedAuth := auth.Group("", middleware.JWTAuth(cfg.JWT.Secret))
 	protectedAuth.Get("/me", middleware.JWTAuth(cfg.JWT.Secret), userAuthHandler.Me)
 
+	// Health
+	// @Summary Проверка состояния сервиса
+	// @Description Проверяет доступность API и базы данных
+	// @Tags Health
+	// @Produce json
+	// @Success 200 {object} map[string]string
+	// @Router /health [get]
 	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status":   "ok",
-			"database": "ok",
+		dbStatus := "ok"
+		redisStatus := "ok"
+		status := fiber.StatusOK
+
+		if err := sqlDB.Ping(); err != nil {
+			dbStatus = "error"
+			status = fiber.StatusServiceUnavailable
+		}
+
+		if err := redisClient.Ping(c.UserContext()).Err(); err != nil {
+			redisStatus = "error"
+			status = fiber.StatusServiceUnavailable
+		}
+
+		serviceStatus := "ok"
+		if status != fiber.StatusOK {
+			serviceStatus = "error"
+		}
+
+		return c.Status(status).JSON(fiber.Map{
+			"status":   serviceStatus,
+			"database": dbStatus,
+			"redis":    redisStatus,
 			"service":  cfg.App.Name,
 		})
 	})

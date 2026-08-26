@@ -26,6 +26,19 @@ type UpdateUserRequest struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
+// GetByID
+// @Summary Получить пользователя
+// @Description Возвращает пользователя по ID
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID пользователя"
+// @Success 200 {object} model.User
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/users/{id} [get]
 func (h *UserHandler) GetByID(c *fiber.Ctx) error {
 	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
 	if err != nil {
@@ -50,6 +63,21 @@ func (h *UserHandler) GetByID(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
+// Update
+// @Summary Обновить пользователя
+// @Description Обновляет данные пользователя, кроме пароля
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID пользователя"
+// @Param request body UpdateUserRequest true "Данные пользователя"
+// @Success 200 {object} model.User
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/users/{id} [put]
 func (h *UserHandler) Update(c *fiber.Ctx) error {
 	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
 	if err != nil {
@@ -88,6 +116,19 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
+// Delete
+// @Summary Удалить пользователя
+// @Description Удаляет пользователя по ID
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID пользователя"
+// @Success 204
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/v1/users/{id} [delete]
 func (h *UserHandler) Delete(c *fiber.Ctx) error {
 	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
 	if err != nil {
