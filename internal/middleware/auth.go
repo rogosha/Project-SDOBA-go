@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"SDOBA/internal/service"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,45 +18,31 @@ func JWTAuth(secret string) fiber.Handler {
 			})
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		if !strings.HasPrefix(authHeader, "Bearer") {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid authorization header",
 			})
 		}
 
-		tokenString := parts[1]
+		tokenString := authHeader[7:]
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if token.Method != jwt.SigningMethodHS256 {
-				return nil, jwt.ErrSignatureInvalid
-			}
+		claims := &service.Claims{}
 
-			return []byte(secret), nil
-		})
+		token, err := jwt.ParseWithClaims(tokenString, claims,
+			func(token *jwt.Token) (interface{}, error) {
+				if token.Method != jwt.SigningMethodHS256 {
+					return nil, jwt.ErrSignatureInvalid
+				}
+
+				return []byte(secret), nil
+			})
 
 		if err != nil || !token.Valid {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid or expired token",
 			})
 		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "invalid token claims",
-			})
-		}
-
-		userID, ok := claims["user_id"].(float64)
-		if !ok {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "invalid user id",
-			})
-		}
-
-		c.Locals("user_id", uint(userID))
+		c.Locals("user_id", claims.UserID)
 
 		return c.Next()
 	}

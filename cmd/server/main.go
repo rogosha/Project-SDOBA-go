@@ -11,6 +11,7 @@ import (
 	"SDOBA/internal/config"
 	"SDOBA/internal/database"
 	"SDOBA/internal/middleware"
+	"github.com/gofiber/swagger"
 )
 
 func main() {
@@ -31,6 +32,8 @@ func main() {
 	}
 
 	app := fiber.New()
+
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	tokenService := service.NewTokenService(cfg.JWT.Secret)
 	userRepository := repository.NewUserRepository(db)
