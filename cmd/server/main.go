@@ -43,14 +43,21 @@ func main() {
 	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	tokenService := service.NewTokenService(cfg.JWT.Secret)
+
 	userRepository := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepository)
 	userHandler := handler.NewUserHandler(userService)
+
 	authService := service.NewAuthService(userService, tokenService)
 	userAuthHandler := handler.NewAuthHandler(authService)
+
 	conversationRepository := repository.NewConversationRepository(db)
 	conversationService := service.NewConversationService(conversationRepository)
 	conversationHandler := handler.NewConversationHandler(conversationService)
+
+	messageRepository := repository.NewMessageRepository(db)
+	messageService := service.NewMessageService(messageRepository, conversationRepository)
+	messageHandler := handler.NewMessageHandler(messageService)
 
 	api := app.Group("/api/v1")
 
@@ -71,6 +78,8 @@ func main() {
 	conversations.Post("/", conversationHandler.Create)
 	conversations.Get("/", conversationHandler.GetUserConversations)
 	conversations.Get("/:id", conversationHandler.GetByID)
+	conversations.Post("/:id/messages", messageHandler.Create)
+	conversations.Get("/:id/messages", messageHandler.GetByConversationID)
 
 	// Health
 	// @Summary Проверка состояния сервиса

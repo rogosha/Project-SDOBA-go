@@ -9,29 +9,46 @@ import (
 	"SDOBA/internal/repository"
 )
 
-var ErrMessageNotFound = errors.New("message not found")
+var (
+	ErrEmptyMessage          = errors.New("message content is empty")
+	ErrNotConversationMember = errors.New("user is not a conversation member")
+	ErrMessageNotFound       = errors.New("message not found")
+)
 
 type MessageService struct {
-	repository *repository.MessageRepository
+	messageRepository      *repository.MessageRepository
+	conversationRepository *repository.ConversationRepository
 }
 
 func NewMessageService(
-	repository *repository.MessageRepository,
+	messageRepository *repository.MessageRepository,
+	conversationRepository *repository.ConversationRepository,
 ) *MessageService {
 	return &MessageService{
-		repository: repository,
+		messageRepository:      messageRepository,
+		conversationRepository: conversationRepository,
 	}
 }
 
-func (s *MessageService) Create(
-	ctx context.Context,
-	conversationID uint,
-	userID uint,
-	content string,
+func (s *MessageService) Create(ctx context.Context, conversationID uint, userID uint, content string,
 ) (*model.Message, error) {
 
 	if content == "" {
-		return nil, errors.New("message content is empty")
+		return nil, ErrEmptyMessage
+	}
+
+	isMember, err := s.conversationRepository.IsMember(
+		ctx,
+		conversationID,
+		userID,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("check conversation member: %w", err)
+	}
+
+	if !isMember {
+		return nil, ErrNotConversationMember
 	}
 
 	message := &model.Message{
@@ -40,27 +57,39 @@ func (s *MessageService) Create(
 		Content:        content,
 	}
 
-	if err := s.repository.Create(ctx, message); err != nil {
+	if err := s.messageRepository.Create(ctx, message); err != nil {
 		return nil, fmt.Errorf("create message: %w", err)
 	}
 
 	return message, nil
 }
 
-func (s *MessageService) GetByConversationID(
-	ctx context.Context,
-	conversationID uint,
+func (s *MessageService) GetByConversationID(ctx context.Context, conversationID uint, userID uint,
 ) ([]model.Message, error) {
 
-	return s.repository.GetByConversationID(ctx, conversationID)
+	isMember, err := s.conversationRepository.IsMember(
+		ctx,
+		conversationID,
+		userID,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("check conversation member: %w", err)
+	}
+
+	if !isMember {
+		return nil, ErrNotConversationMember
+	}
+
+	return s.messageRepository.GetByConversationID(
+		ctx,
+		conversationID,
+	)
 }
 
-func (s *MessageService) Delete(
-	ctx context.Context,
-	id uint,
-) error {
+func (s *MessageService) Delete(ctx context.Context, id uint) error {
 
-	if err := s.repository.Delete(ctx, id); err != nil {
+	if err := s.messageRepository.Delete(ctx, id); err != nil {
 		if errors.Is(err, repository.ErrMessageNotFound) {
 			return ErrMessageNotFound
 		}
