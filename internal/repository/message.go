@@ -84,3 +84,19 @@ func (r *MessageRepository) Delete(
 
 	return nil
 }
+
+func (r *MessageRepository) DeleteByID(ctx context.Context, id uint, userID uint) error {
+	result := r.db.WithContext(ctx).
+		Where("id = ? AND sender_id = ?", id, userID).
+		Delete(&model.Message{})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return ErrMessageNotFound
+	}
+
+	return nil
+}

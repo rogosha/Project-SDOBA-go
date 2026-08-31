@@ -98,3 +98,28 @@ func (h *MessageHandler) GetByConversationID(c *fiber.Ctx) error {
 
 	return c.JSON(messages)
 }
+
+func (h *MessageHandler) Delete(c *fiber.Ctx) error {
+	id, err := strconv.ParseUint(c.Params("messageID"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid message id",
+		})
+	}
+
+	userID := c.Locals("user_id").(uint)
+
+	if err := h.messageService.Delete(c.UserContext(), uint(id), userID); err != nil {
+		if errors.Is(err, service.ErrMessageNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "message not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}

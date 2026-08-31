@@ -87,9 +87,8 @@ func (s *MessageService) GetByConversationID(ctx context.Context, conversationID
 	)
 }
 
-func (s *MessageService) Delete(ctx context.Context, id uint) error {
-
-	if err := s.messageRepository.Delete(ctx, id); err != nil {
+func (s *MessageService) Delete(ctx context.Context, id uint, userID uint) error {
+	if err := s.messageRepository.DeleteByID(ctx, id, userID); err != nil {
 		if errors.Is(err, repository.ErrMessageNotFound) {
 			return ErrMessageNotFound
 		}

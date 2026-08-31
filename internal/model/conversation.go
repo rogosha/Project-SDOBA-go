@@ -10,3 +10,6 @@ type Conversation struct {
 	Members  []ConversationMember `gorm:"foreignKey:ConversationID" json:"members"`
 	Messages []Message            `json:"messages,omitempty"`
 }
+type AddMemberRequest struct {
+	UserID uint `json:"user_id"`
+}

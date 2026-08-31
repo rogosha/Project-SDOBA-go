@@ -80,6 +80,7 @@ func main() {
 	conversations.Get("/:id", conversationHandler.GetByID)
 	conversations.Post("/:id/messages", messageHandler.Create)
 	conversations.Get("/:id/messages", messageHandler.GetByConversationID)
+	conversations.Delete("/:conversationID/messages/:messageID", messageHandler.Delete)
 
 	// Health
 	// @Summary Проверка состояния сервиса
