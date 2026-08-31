@@ -48,6 +48,9 @@ func main() {
 	userHandler := handler.NewUserHandler(userService)
 	authService := service.NewAuthService(userService, tokenService)
 	userAuthHandler := handler.NewAuthHandler(authService)
+	conversationRepository := repository.NewConversationRepository(db)
+	conversationService := service.NewConversationService(conversationRepository)
+	conversationHandler := handler.NewConversationHandler(conversationService)
 
 	api := app.Group("/api/v1")
 
@@ -61,7 +64,13 @@ func main() {
 	auth.Post("/login", userAuthHandler.Login)
 
 	protectedAuth := auth.Group("", middleware.JWTAuth(cfg.JWT.Secret))
-	protectedAuth.Get("/me", middleware.JWTAuth(cfg.JWT.Secret), userAuthHandler.Me)
+	protectedAuth.Get("/me", userAuthHandler.Me)
+
+	conversations := api.Group("/conversations", middleware.JWTAuth(cfg.JWT.Secret))
+
+	conversations.Post("/", conversationHandler.Create)
+	conversations.Get("/", conversationHandler.GetUserConversations)
+	conversations.Get("/:id", conversationHandler.GetByID)
 
 	// Health
 	// @Summary Проверка состояния сервиса
