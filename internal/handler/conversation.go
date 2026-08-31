@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"SDOBA/internal/repository"
 	"SDOBA/internal/service"
 	"errors"
 	"strconv"
@@ -10,6 +11,10 @@ import (
 
 type CreateConversationRequest struct {
 	UserIDs []uint `json:"user_ids"`
+}
+
+type AddMemberRequest struct {
+	UserID uint `json:"user_id"`
 }
 
 type ConversationHandler struct {
@@ -109,4 +114,98 @@ func (h *ConversationHandler) GetByID(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(conversation)
+}
+
+func (h *ConversationHandler) AddMember(c *fiber.Ctx) error {
+	conversationID, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid conversation id",
+		})
+	}
+
+	var req AddMemberRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid request body",
+		})
+	}
+
+	if req.UserID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid user id",
+		})
+	}
+
+	requesterID := c.Locals("user_id").(uint)
+
+	err = h.conversationService.AddMember(c.UserContext(), uint(conversationID), req.UserID, requesterID)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrConversationAccessDenied):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "you are not a member of this conversation",
+			})
+
+		case errors.Is(err, repository.ErrUserNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "user not found",
+			})
+
+		case errors.Is(err, repository.ErrUserAlreadyMember):
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "user already a member",
+			})
+
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error",
+			})
+		}
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *ConversationHandler) RemoveMember(c *fiber.Ctx) error {
+	conversationID, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid conversation id",
+		})
+	}
+
+	userID, err := strconv.ParseUint(c.Params("userID"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid user id",
+		})
+	}
+
+	requesterID := c.Locals("user_id").(uint)
+
+	err = h.conversationService.RemoveMember(c.UserContext(), uint(conversationID), uint(userID), requesterID)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrConversationAccessDenied):
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "you are not a member of this conversation",
+			})
+
+		case errors.Is(err, service.ErrConversationMinMembers):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "conversation must have at least 2 members",
+			})
+
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "internal server error",
+			})
+		}
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }

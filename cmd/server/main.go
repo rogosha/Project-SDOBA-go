@@ -6,6 +6,7 @@ import (
 	"SDOBA/internal/service"
 	"log"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 
 	"SDOBA/docs"
@@ -81,7 +82,12 @@ func main() {
 	conversations.Post("/:id/messages", messageHandler.Create)
 	conversations.Get("/:id/messages", messageHandler.GetByConversationID)
 	conversations.Delete("/:conversationID/messages/:messageID", messageHandler.Delete)
+	conversations.Post("/:id/members", conversationHandler.AddMember)
+	conversations.Delete("/:id/members/:userID", conversationHandler.RemoveMember)
 
+	wsHandler := handler.NewWSHandler()
+	app.Get("/api/v1/ws/conversations/:id", websocket.New(wsHandler.Handle))
+	
 	// Health
 	// @Summary Проверка состояния сервиса
 	// @Description Проверяет доступность API и базы данных

@@ -9,7 +9,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var ErrConversationNotFound = errors.New("conversation not found")
+var (
+	ErrConversationNotFound = errors.New("conversation not found")
+	ErrUserAlreadyMember    = errors.New("user already a member")
+)
 
 type ConversationRepository struct {
 	db *gorm.DB
@@ -75,29 +78,6 @@ func (r *ConversationRepository) Create(
 	return &conversation, nil
 }
 
-func (r *ConversationRepository) AddMember(ctx context.Context, member *model.ConversationMember) error {
-	return r.db.WithContext(ctx).Create(member).Error
-}
-
-func (r *ConversationRepository) GetByID(ctx context.Context, id uint) (*model.Conversation, error) {
-
-	var conversation model.Conversation
-
-	err := r.db.WithContext(ctx).
-		Preload("Members").
-		First(&conversation, id).Error
-
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrConversationNotFound
-		}
-
-		return nil, err
-	}
-
-	return &conversation, nil
-}
-
 func (r *ConversationRepository) GetUserConversations(ctx context.Context, userID uint) ([]model.Conversation, error) {
 	var conversations []model.Conversation
 
@@ -153,4 +133,107 @@ func (r *ConversationRepository) FindByMembers(ctx context.Context, userIDs []ui
 	}
 
 	return &conversation, nil
+}
+
+func (r *ConversationRepository) AddMember(ctx context.Context, conversationID uint, userID uint) error {
+	var user model.User
+
+	if err := r.db.WithContext(ctx).First(&user, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrUserNotFound
+		}
+		return err
+	}
+
+	var member model.ConversationMember
+
+	err := r.db.WithContext(ctx).
+		Where("conversation_id = ? AND user_id = ?", conversationID, userID).
+		First(&member).Error
+
+	if err == nil {
+		return ErrUserAlreadyMember
+	}
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	member = model.ConversationMember{
+		ConversationID: conversationID,
+		UserID:         userID,
+	}
+
+	return r.db.WithContext(ctx).Create(&member).Error
+}
+
+func (r *ConversationRepository) GetByID(ctx context.Context, id uint) (*model.Conversation, error) {
+	var conversation model.Conversation
+
+	err := r.db.WithContext(ctx).
+		Preload("Members").
+		First(&conversation, id).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrConversationNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &conversation, nil
+}
+
+func (r *ConversationRepository) RemoveMember(ctx context.Context, conversationID uint, userID uint) error {
+	result := r.db.WithContext(ctx).
+		Where("conversation_id = ? AND user_id = ?", conversationID, userID).
+		Delete(&model.ConversationMember{})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
+func (r *ConversationRepository) CountMembers(ctx context.Context, conversationID uint) (int64, error) {
+	var count int64
+
+	err := r.db.WithContext(ctx).
+		Model(&model.ConversationMember{}).
+		Where("conversation_id = ?", conversationID).
+		Count(&count).Error
+
+	return count, err
+}
+
+func (r *ConversationRepository) Delete(ctx context.Context, conversationID uint) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("conversation_id = ?", conversationID).
+			Delete(&model.Message{}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("conversation_id = ?", conversationID).
+			Delete(&model.ConversationMember{}).Error; err != nil {
+			return err
+		}
+
+		result := tx.Delete(&model.Conversation{}, conversationID)
+
+		if result.Error != nil {
+			return result.Error
+		}
+
+		if result.RowsAffected == 0 {
+			return ErrConversationNotFound
+		}
+
+		return nil
+	})
 }
